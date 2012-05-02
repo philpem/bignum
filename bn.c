@@ -19,6 +19,8 @@ typedef unsigned int *BIGNUM_P;
  *
  * Adds the BIGNUMs <i>a</i> and <i>b</i> together, storing the result in <i>out</i>.
  *
+ * Operation: <i>out</i> = <i>a</i> + <i>b</i>
+ *
  * @param a First operand
  * @param b Second operand
  * @param out Output
@@ -37,6 +39,17 @@ void bn_add(const BIGNUM_P a, const BIGNUM_P b, BIGNUM_P out)
 	assert(m == 0);
 }
 
+/**
+ * Subtract one BIGNUM from another.
+ *
+ * Subtracts the BIGNUM <i>b</i> from <i>a</i>, storing the result in <i>out</i>.
+ *
+ * Operation: <i>out</i> = <i>a</i> - <i>b</i>
+ *
+ * @param a First operand
+ * @param b Second operand
+ * @param out Output
+ */
 void bn_sub(const BIGNUM_P a, const BIGNUM_P b, BIGNUM_P out)
 {
 	size_t i;
@@ -51,16 +64,40 @@ void bn_sub(const BIGNUM_P a, const BIGNUM_P b, BIGNUM_P out)
 	assert(m == 0);
 }
 
+/**
+ * Copy a BIGNUM.
+ *
+ * Copies the BIGNUM <i>a</i> into <i>out</i> without modifying it.
+ *
+ * Operation: <i>out</i> = <i>a</i>
+ *
+ * @param a First operand
+ * @param out Output
+ */
 void bn_copy(const BIGNUM_P a, BIGNUM_P out)
 {
 	memcpy(out, a, BN_SZ*sizeof(out[0]));
 }
 
+/**
+ * Clear a BIGNUM.
+ *
+ * Sets the value of the BIGNUM <i>out</i> to zero.
+ *
+ * Operation: <i>out</i> = 0
+ *
+ * @param out Output
+ */
 void bn_clear(BIGNUM_P out)
 {
 	memset(out, 0, BN_SZ*sizeof(out[0]));
 }
 
+/**
+ * Print a BIGNUM in hexadecimal form.
+ *
+ * @param a Number to print
+ */
 void bn_printhex(const BIGNUM_P a)
 {
 	ssize_t i;
@@ -70,6 +107,15 @@ void bn_printhex(const BIGNUM_P a)
 	}
 }
 
+/**
+ * Print a BIGNUM in hexadecmial, prefixed with a user specified string and suffixed with a newline.
+ *
+ * Prints the value of the BIGNUM <i>a</i> on STDOUT, prefixed by the string
+ * <i>s</i> and suffixed with a newline.
+ *
+ * @param s String prefix
+ * @param a Number to print
+ */
 void bn_printhex_s(const char *s, const BIGNUM_P a)
 {
 	printf("%s", s);
@@ -77,6 +123,16 @@ void bn_printhex_s(const char *s, const BIGNUM_P a)
 	printf("\n");
 }
 
+/**
+ * Shift the value of a BIGNUM left by one bit.
+ *
+ * Shifts the value of the BIGNUM <i>a</i> left one bit, storing the result in <i>out</i>.
+ *
+ * Operation: <i>out</i> = <i>a</i> << 1
+ *
+ * @param a First operand
+ * @param out Output
+ */
 void bn_shl(const BIGNUM_P a, BIGNUM_P out)
 {
 	size_t i;
@@ -93,6 +149,16 @@ void bn_shl(const BIGNUM_P a, BIGNUM_P out)
 	}
 }
 
+/**
+ * Shift the value of a BIGNUM right by one bit.
+ *
+ * Shifts the value of the BIGNUM <i>a</i> left one bit, storing the result in <i>out</i>.
+ *
+ * Operation: <i>out</i> = <i>a</i> >> 1
+ *
+ * @param a First operand
+ * @param out Output
+ */
 void bn_shr(const BIGNUM_P a, BIGNUM_P out)
 {
 	ssize_t i;
