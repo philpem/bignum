@@ -1,0 +1,13 @@
+CFLAGS+=-Wall -Wextra -std=c99
+
+ifeq ($(DEBUG),1)
+  CFLAGS+=-ggdb
+else
+  CFLAGS+=-O2 -march=native
+endif
+
+bn: bn.o
+	$(CC) -o $@ $<
+
+clean:
+	rm bn bn.o
