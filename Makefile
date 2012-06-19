@@ -3,7 +3,7 @@ CFLAGS+=-Wall -Wextra -std=c99
 ifeq ($(DEBUG),1)
   CFLAGS+=-ggdb
 else
-  CFLAGS+=-O2 -march=native
+  CFLAGS+=-O2 -funroll-loops
 endif
 
 bn: bn.o
