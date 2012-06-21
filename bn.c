@@ -437,6 +437,40 @@ BN_ERR bn_load_int(const uint64_t i, BIGNUM_P out)
 	return BN_OK;
 }
 
+BN_ERR bn_powmod(const BIGNUM_P base, const BIGNUM_P exponent, const BIGNUM_P modulus, BIGNUM_P result)
+{
+	BN_ERR err;
+	BIGNUM base_l, exponent_l, tmp;
+
+	if ((err = bn_load_int(1, result)) != BN_OK)
+		return err;
+	if ((err = bn_copy(base, base_l)) != BN_OK)
+		return err;
+	if ((err = bn_copy(exponent, exponent_l)) != BN_OK)
+		return err;
+
+	while (!bn_iszero(exponent_l)) {
+		// If LSBit of exponent is set...
+		if (bn_get_bit(exponent_l, 0)) {
+			// result := (result * base) mod modulus
+			if ((err = bn_mul(result, base_l, tmp)) != BN_OK)
+				return err;
+			if ((err = bn_div(tmp, modulus, NULL, result)) != BN_OK)
+				return err;
+		}
+		if ((err = bn_shr(exponent_l, exponent_l)) != BN_OK)
+			return err;
+
+		// base = (base * base) mod modulus
+		if ((err = bn_mul(base_l, base_l, tmp)) != BN_OK)
+			return err;
+		if ((err = bn_div(tmp, modulus, NULL, base_l)) != BN_OK)
+			return err;
+	}
+
+	return BN_OK;
+}
+
 // TODO: bn_load_arr -- load a binary array into a bignum
 // TODO: bn_save_arr -- save a bignum as a binary array
 
@@ -537,6 +571,16 @@ int main(void)
 	printf("\n-- load int --\n");
 	bn_load_int(0xFEEDFACEul, a);
 	bn_printhex_s("a     = ", a);
+
+	printf("\n-- powmod --\n");
+	bn_load_int(4, a);
+	bn_load_int(13, b);
+	bn_load_int(497, c);
+	bn_powmod(a, b, c, d);
+	bn_printhex_s("base     = ", a);
+	bn_printhex_s("exponent = ", b);
+	bn_printhex_s("modulus  = ", c);
+	bn_printhex_s("result   = ", d);
 
 	return 0;
 }
