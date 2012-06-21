@@ -27,7 +27,7 @@ typedef int32_t BN_EXT_SIGNED;
 /// Maximum value of a single BN_BASE element
 #define BN_BASE_MAX ((BN_BASE)-1)
 /// Number of bits in a BN_BASE element
-#define BN_ELEM_BITS ((sizeof(BN_BASE))*8)
+#define BN_BASE_BITS ((sizeof(BN_BASE))*8)
 
 /// Big number type
 typedef BN_BASE BIGNUM[BN_SZ];
@@ -250,8 +250,8 @@ int bn_get_bit(const BIGNUM_P a, int bit)
 	unsigned int nelem, mask;
 
 	// Calculate element and bit offsets
-	nelem = bit / BN_ELEM_BITS;
-	mask = (1 << (bit % BN_ELEM_BITS));
+	nelem = bit / BN_BASE_BITS;
+	mask = (1 << (bit % BN_BASE_BITS));
 
 	// TODO: assert if nelem is out of range!
 
@@ -276,8 +276,8 @@ BN_ERR bn_set_bit(BIGNUM_P a, int bit, int val)
 	unsigned int nelem, mask;
 
 	// Calculate element and bit offsets
-	nelem = bit / BN_ELEM_BITS;
-	mask = (1 << (bit % BN_ELEM_BITS));
+	nelem = bit / BN_BASE_BITS;
+	mask = (1 << (bit % BN_BASE_BITS));
 
 	// TODO: assert if nelem is out of range!
 
@@ -417,7 +417,26 @@ BN_ERR bn_div(const BIGNUM_P n, const BIGNUM_P d, BIGNUM_P q, BIGNUM_P r)
 	return BN_OK;
 }
 
-// TODO: bn_load_int -- Load a longint into a bignum
+BN_ERR bn_load_int(const uint64_t i, BIGNUM_P out)
+{
+	uint64_t x = i;
+	size_t pos = 0;
+
+	bn_clear(out);
+
+	while (x > 0) {
+		// Store and shift
+		out[pos++] = x & BN_BASE_MAX;
+		x >>= BN_BASE_BITS;
+
+		// Avoid buffer overruns
+		if (pos >= BN_SZ)
+			return BN_E_OVERFLOW;
+	}
+
+	return BN_OK;
+}
+
 // TODO: bn_load_arr -- load a binary array into a bignum
 // TODO: bn_save_arr -- save a bignum as a binary array
 
@@ -440,7 +459,8 @@ int main(void)
 
 	printf("\n-- clear and add --\n");
 	bn_clear(a); bn_clear(b);
-	a[0] = b[0] = 0xFFFFFFFFul;
+	bn_load_int(0xFFFFFFFFul, a);
+	bn_load_int(0xFFFFFFFFul, b);
 //	b[0] = 0x12345678;
 	bn_add(a, b, c);
 	bn_printhex_s("a   = ", a);
@@ -449,7 +469,7 @@ int main(void)
 
 	printf("\n-- shift left --\n");
 	bn_clear(c);
-	c[0] = 0x40000000ul;
+	bn_load_int(0x40000000ul, c);
 	bn_printhex_s("c     = ", c);
 	bn_shl(c, c);
 	bn_printhex_s("shl 1 = ", c);
@@ -469,10 +489,8 @@ int main(void)
 
 	printf("\n-- clear and subtract --\n");
 	bn_clear(a); bn_clear(b);
-	a[1] = 0x42;
-	a[0] = 0xFFEAFFEEul;
-	b[1] = 0x03;
-	b[0] = 0xDDAEAFEAul;
+	bn_load_int(0x42FFEAFFEEull, a);
+	bn_load_int(0x03DDAEAFEAull, b);
 	bn_sub(a, b, c);
 	bn_printhex_s("a     = ", a);
 	bn_printhex_s("b     = ", b);
@@ -515,6 +533,10 @@ int main(void)
 	bn_printhex_s("b     = ", b);
 	bn_printhex_s("a / b = ", c);
 	bn_printhex_s("a \% b = ", d);
+
+	printf("\n-- load int --\n");
+	bn_load_int(0xFEEDFACEul, a);
+	bn_printhex_s("a     = ", a);
 
 	return 0;
 }
