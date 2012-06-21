@@ -378,10 +378,16 @@ BN_ERR bn_mul(const BIGNUM_P a, const BIGNUM_P b, BIGNUM_P out)
  * @param d Divisor
  * @param q Quotient
  * @param r Remainder
+ *
  * @returns BN_OK on success, otherwise a BN_ERR error code.
+ *
+ * @note Either <i>q</i> or <i>r</i> may be NULL. Thus, this function can
+ *       serve double duty as a <i>divide</i> or <i>modulus</i> function, or
+ *       perform both operations at the same time.
  */
 BN_ERR bn_div(const BIGNUM_P n, const BIGNUM_P d, BIGNUM_P q, BIGNUM_P r)
 {
+	BIGNUM r_l;
 	BN_ERR err;
 	ssize_t i;
 
@@ -391,20 +397,23 @@ BN_ERR bn_div(const BIGNUM_P n, const BIGNUM_P d, BIGNUM_P q, BIGNUM_P r)
 
 	// Initialise quotient and remainder to zero
 	if ((err = bn_clear(q)) != BN_OK) return err;
-	if ((err = bn_clear(r)) != BN_OK) return err;
+	if ((err = bn_clear(r_l)) != BN_OK) return err;
 
 	for (i=BN_BITS-1; i>=0; i--) {
 		// Shift remainder left one bit
-		if ((err = bn_shl(r, r)) != BN_OK) return err;
+		if ((err = bn_shl(r_l, r_l)) != BN_OK) return err;
 		// Set LSB of R equal to bit I of the numerator
-		bn_set_bit(r, 0, bn_get_bit(n, i));
+		bn_set_bit(r_l, 0, bn_get_bit(n, i));
 
-		if (bn_cmp(r, d) >= 0) {	// if (r >= d)
-			bn_sub(r, d, r);		// r = r - d
-			bn_set_bit(q, i, 1);	// q.bits[i] = 1
+		if (bn_cmp(r_l, d) >= 0) {	// if (r >= d)
+			bn_sub(r_l, d, r_l);	// r = r - d
+			if (q != NULL)				// allow quotient output to be omitted
+				bn_set_bit(q, i, 1);	// q.bits[i] = 1
 		}
 	}
 
+	if (r != NULL)
+		bn_copy(r_l, r);
 	return BN_OK;
 }
 
