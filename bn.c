@@ -396,8 +396,11 @@ BN_ERR bn_div(const BIGNUM_P n, const BIGNUM_P d, BIGNUM_P q, BIGNUM_P r)
 		return BN_E_DIVIDE_BY_ZERO;
 
 	// Initialise quotient and remainder to zero
-	if ((err = bn_clear(q)) != BN_OK) return err;
-	if ((err = bn_clear(r_l)) != BN_OK) return err;
+	if (q != NULL)
+		if ((err = bn_clear(q)) != BN_OK)
+			return err;
+	if ((err = bn_clear(r_l)) != BN_OK)
+		return err;
 
 	for (i=BN_BITS-1; i>=0; i--) {
 		// Shift remainder left one bit
