@@ -40,7 +40,8 @@ typedef BN_BASE *BIGNUM_P;
 typedef enum {
 	BN_OK				= 0,		///< All systems go!
 	BN_E_OVERFLOW,					///< Integer overflow
-	BN_E_NEGATIVE					///< Subtraction caused a negative result
+	BN_E_NEGATIVE,					///< Subtraction caused a negative result
+	BN_E_DIVIDE_BY_ZERO				///< Attempt to divide by zero
 } BN_ERR;
 
 
@@ -308,9 +309,32 @@ bool bn_iszero(const BIGNUM_P a)
 }
 
 /**
+ * Compare two BIGNUMs.
+ *
+ * @param a First BIGNUM
+ * @param b Second BIGNUM
+ * @return <b>-1</b> if <i>a</i> < <i>b</i>, <b>0</b> if <i>a</i> == <i>b</i>, or <b>1</b> if <i>a</i> > <i>b</i>.
+ */
+int bn_cmp(const BIGNUM_P a, const BIGNUM_P b)
+{
+	ssize_t i;
+
+	for (i=BN_SZ-1; i>=0; i--) {
+		if (a[i] < b[i])
+			return -1;
+		else if (a[i] > b[i])
+			return 1;
+	}
+
+	return 0;
+}
+
+/**
  * Multiply two BIGNUMs.
  *
  * Multiplies <i>a</i> and <i>b</i>, storing the result in <i>out</i>.
+ *
+ * Operation: <i>out</i> = <i>a</i> * <i>b</i>
  *
  * @param a Multiplier
  * @param b Multiplicand
@@ -343,14 +367,54 @@ BN_ERR bn_mul(const BIGNUM_P a, const BIGNUM_P b, BIGNUM_P out)
 	return BN_OK;
 }
 
-// TODO: bn_compare (aka bn_cmp)
+/**
+ * Divide one BIGNUM by another.
+ *
+ * Divides <i>n</i> by <i>d</i>, returning the quotient in <i>q</i> and the remainder in <i>r</i>.
+ *
+ * Operation: <i>q</i> = <i>n</i> / <i>d</i>; <i>r</i> = <i>n</i> % <i>d</i>
+ *
+ * @param n Numerator
+ * @param d Divisor
+ * @param q Quotient
+ * @param r Remainder
+ * @returns BN_OK on success, otherwise a BN_ERR error code.
+ */
+BN_ERR bn_div(const BIGNUM_P n, const BIGNUM_P d, BIGNUM_P q, BIGNUM_P r)
+{
+	BN_ERR err;
+	ssize_t i;
+
+	// Check for divide-by-zero
+	if (bn_iszero(d))
+		return BN_E_DIVIDE_BY_ZERO;
+
+	// Initialise quotient and remainder to zero
+	if ((err = bn_clear(q)) != BN_OK) return err;
+	if ((err = bn_clear(r)) != BN_OK) return err;
+
+	for (i=BN_BITS-1; i>=0; i--) {
+		// Shift remainder left one bit
+		if ((err = bn_shl(r, r)) != BN_OK) return err;
+		// Set LSB of R equal to bit I of the numerator
+		bn_set_bit(r, 0, bn_get_bit(n, i));
+
+		if (bn_cmp(r, d) >= 0) {	// if (r >= d)
+			bn_sub(r, d, r);		// r = r - d
+			bn_set_bit(q, i, 1);	// q.bits[i] = 1
+		}
+	}
+
+	return BN_OK;
+}
+
 // TODO: bn_load_int -- Load a longint into a bignum
 // TODO: bn_load_arr -- load a binary array into a bignum
 // TODO: bn_save_arr -- save a bignum as a binary array
 
 int main(void)
 {
-	BIGNUM a, b, c;
+	BIGNUM a, b, c, d;
 
 	printf("Native int size: %zu\n", sizeof(int));
 	printf("Optimal settings:\ntypedef BN_BASE uint%zu_t;\ntypedef BN_EXT uint%zu_t;\ntypedef BN_EXT_SIGNED int%zu_t;\n",
@@ -421,6 +485,27 @@ int main(void)
 	bn_printhex_s("a     = ", a);
 	bn_printhex_s("b     = ", b);
 	bn_printhex_s("a * b = ", c);
+
+	printf("\n-- compare --\n");
+	bn_clear(a); bn_clear(b);
+	a[1] = 1; a[0] = 0xfeed;
+	b[1] = 1; b[0] = 0xbeef;
+	bn_printhex_s("a         = ", a);
+	bn_printhex_s("b         = ", b);
+	       printf("cmp(a, a) = %d\n", bn_cmp(a,a));
+	       printf("cmp(a, b) = %d\n", bn_cmp(a,b));
+	       printf("cmp(b, a) = %d\n", bn_cmp(b,a));
+	       printf("cmp(b, b) = %d\n", bn_cmp(b,b));
+
+	printf("\n-- divide (also tests iszero, clear, shl, get_bit, set_bit, cmp, sub) --\n");
+	bn_clear(a); bn_clear(b);
+	a[0] = 0xfeed;
+	b[0] = 0xbeef;
+	bn_div(a, b, c, d);
+	bn_printhex_s("a     = ", a);
+	bn_printhex_s("b     = ", b);
+	bn_printhex_s("a / b = ", c);
+	bn_printhex_s("a \% b = ", d);
 
 	return 0;
 }
