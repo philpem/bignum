@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 /// The desired size of a BIGNUM, in bits. Must be a multiple of (sizeof(BN_BASE)/8) bits.
 #define BN_BITS 64
@@ -25,6 +26,8 @@ typedef int32_t BN_EXT_SIGNED;
 #define BN_SZ (BN_BITS/8/sizeof(BN_BASE))
 /// Maximum value of a single BN_BASE element
 #define BN_BASE_MAX ((BN_BASE)-1)
+/// Number of bits in a BN_BASE element
+#define BN_ELEM_BITS ((sizeof(BN_BASE))*8)
 
 /// Big number type
 typedef BN_BASE BIGNUM[BN_SZ];
@@ -135,6 +138,7 @@ BN_ERR bn_clear(BIGNUM_P out)
 	return BN_OK;
 }
 
+// TODO:
 // bn_load_int -- Load a longint into a bignum
 // bn_load_str -- load a binary stream into a bignum
 // bn_save_str -- save a bignum as a binary stream
@@ -235,6 +239,101 @@ BN_ERR bn_shr(const BIGNUM_P a, BIGNUM_P out)
 	return BN_OK;
 }
 
+/**
+ * Return the state of a bit in a BIGNUM.
+ *
+ * Returns the state (1 or 0) of bit <i>bit</i> in the BIGNUM <i>a</i>.
+ *
+ * Operation: <i>return_value</i> = (<i>a</i> & (1 << <i>num</i>)) ? 1 : 0;
+ *
+ * @param a BIGNUM input
+ * @param bit Bit number to return, 0 is the least significant bit.
+ */
+int bn_get_bit(const BIGNUM_P a, int bit)
+{
+	unsigned int nelem, mask;
+
+	// Calculate element and bit offsets
+	nelem = bit / BN_ELEM_BITS;
+	mask = (1 << (bit % BN_ELEM_BITS));
+
+	// TODO: assert if nelem is out of range!
+
+	// Get and return the bit's state
+	return (a[nelem] & mask) ? 1 : 0;
+}
+
+/**
+ * Modify the state of a bit in a BIGNUM.
+ *
+ * Sets the state (1 or 0) of bit <i>bit</i> in the BIGNUM <i>a</i> to <i>val</i>.
+ *
+ * Operation: <i>val == 0</i>: <i>a</i> = <i>a</i> & (~(1 << <i>num</i>));
+ *            <i>val == 1</i>: <i>a</i> = <i>a</i> | (1 << <i>num</i>);
+ *
+ * @param a BIGNUM input
+ * @param bit Bit number to modify, 0 is the least significant bit.
+ * @param val Bit value, 1 or 0
+ */
+BN_ERR bn_set_bit(BIGNUM_P a, int bit, int val)
+{
+	unsigned int nelem, mask;
+
+	// Calculate element and bit offsets
+	nelem = bit / BN_ELEM_BITS;
+	mask = (1 << (bit % BN_ELEM_BITS));
+
+	// TODO: assert if nelem is out of range!
+
+	// Set the bit's state
+	if (val) {
+		a[nelem] |= mask;
+	} else {
+		a[nelem] &= ~mask;
+	}
+
+	return BN_OK;
+}
+
+
+
+bool bn_iszero(const BIGNUM_P a)
+{
+	ssize_t i;
+
+	for (i=BN_SZ-1; i>=0; i--)
+		if (a[i] != 0)
+			return false;
+
+	return true;
+}
+
+BN_ERR bn_mul(const BIGNUM_P a, const BIGNUM_P b, BIGNUM_P out)
+{
+	BIGNUM a_l, b_l;
+	BN_ERR err;
+
+	if ((err = bn_copy(a, a_l)) != BN_OK)
+		return err;
+	if ((err = bn_copy(b, b_l)) != BN_OK)
+		return err;
+	if ((err = bn_clear(out)) != BN_OK)
+		return err;
+
+	while (!bn_iszero(a_l)) {
+		if (bn_get_bit(a_l, 0)) {
+			if ((err = bn_add(out, b_l, out)) != BN_OK)
+				return err;
+		}
+		if ((err = bn_shr(a_l, a_l)) != BN_OK)
+			return err;
+		if ((err = bn_shl(b_l, b_l)) != BN_OK)
+			return err;
+	}
+
+	return BN_OK;
+}
+
 
 int main(void)
 {
@@ -253,7 +352,7 @@ int main(void)
 	printf("BN_SZ = %zu\n", BN_SZ);
 	assert(BN_SZ > 0);
 
-	printf("-- clear and add --\n");
+	printf("\n-- clear and add --\n");
 	bn_clear(a); bn_clear(b);
 	a[0] = b[0] = 0xFFFFFFFFul;
 //	b[0] = 0x12345678;
@@ -262,7 +361,7 @@ int main(void)
 	bn_printhex_s("b   = ", b);
 	bn_printhex_s("a+b = ", c);
 
-	printf("-- shift left --\n");
+	printf("\n-- shift left --\n");
 	bn_clear(c);
 	c[0] = 0x40000000ul;
 	bn_printhex_s("c     = ", c);
@@ -272,7 +371,7 @@ int main(void)
 	bn_printhex_s("shlCp = ", b);
 	bn_printhex_s("orig  = ", c);
 
-	printf("-- clear and shr --\n");
+	printf("\n-- clear and shr --\n");
 	bn_clear(c);
 	c[1] = 0x1;
 	bn_printhex_s("c     = ", c);
@@ -282,7 +381,7 @@ int main(void)
 	bn_printhex_s("shrCp = ", b);
 	bn_printhex_s("orig  = ", c);
 
-	printf("-- clear and subtract --\n");
+	printf("\n-- clear and subtract --\n");
 	bn_clear(a); bn_clear(b);
 	a[1] = 0x42;
 	a[0] = 0xFFEAFFEEul;
@@ -300,6 +399,15 @@ int main(void)
 	bn_printhex_s("a     = ", a);
 	bn_printhex_s("b     = ", b);
 	bn_printhex_s("a - b = ", c);
+
+	printf("\n-- multiply (also tests shl, shr, bit_get) --\n");
+	bn_clear(a); bn_clear(b);
+	a[0] = 0xfeed;
+	b[0] = 0xbeef;
+	bn_mul(a, b, c);
+	bn_printhex_s("a     = ", a);
+	bn_printhex_s("b     = ", b);
+	bn_printhex_s("a * b = ", c);
 
 	return 0;
 }
