@@ -138,11 +138,6 @@ BN_ERR bn_clear(BIGNUM_P out)
 	return BN_OK;
 }
 
-// TODO:
-// bn_load_int -- Load a longint into a bignum
-// bn_load_str -- load a binary stream into a bignum
-// bn_save_str -- save a bignum as a binary stream
-
 /**
  * Print a BIGNUM in hexadecimal form.
  *
@@ -295,8 +290,12 @@ BN_ERR bn_set_bit(BIGNUM_P a, int bit, int val)
 	return BN_OK;
 }
 
-
-
+/**
+ * Check if a BIGNUM is zero.
+ *
+ * @param a BIGNUM to compare with zero.
+ * @return <b>true</b> if <i>a</i> is zero, otherwise <b>false</b>.
+ */
 bool bn_iszero(const BIGNUM_P a)
 {
 	ssize_t i;
@@ -308,6 +307,16 @@ bool bn_iszero(const BIGNUM_P a)
 	return true;
 }
 
+/**
+ * Multiply two BIGNUMs.
+ *
+ * Multiplies <i>a</i> and <i>b</i>, storing the result in <i>out</i>.
+ *
+ * @param a Multiplier
+ * @param b Multiplicand
+ * @param out Result
+ * @returns BN_OK on success, otherwise a BN_ERR error code.
+ */
 BN_ERR bn_mul(const BIGNUM_P a, const BIGNUM_P b, BIGNUM_P out)
 {
 	BIGNUM a_l, b_l;
@@ -334,6 +343,10 @@ BN_ERR bn_mul(const BIGNUM_P a, const BIGNUM_P b, BIGNUM_P out)
 	return BN_OK;
 }
 
+// TODO: bn_compare (aka bn_cmp)
+// TODO: bn_load_int -- Load a longint into a bignum
+// TODO: bn_load_arr -- load a binary array into a bignum
+// TODO: bn_save_arr -- save a bignum as a binary array
 
 int main(void)
 {
