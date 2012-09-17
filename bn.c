@@ -2,6 +2,13 @@
  * @file
  * @brief Big number math functions
  * @author Philip Pemberton <philpem@philpem.me.uk>
+ *
+ * Most of the algorithms in this file are derived from explanations on
+ * Wikipedia. (binary division, long multiplication etc.) or common sense.
+ * There are probably bugs here, and the code is almost certainly not
+ * optimal.
+ *
+ * Please send bug reports to philpem@philpem.me.uk.
  */
 
 #include <stdio.h>
